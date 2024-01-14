@@ -14,6 +14,7 @@ module com.github.italord0.cadastro {
     requires jakarta.persistence;
     requires org.hibernate.orm.core;
     requires java.persistence;
+    requires java.desktop;
 
     opens com.github.italord0.cadastro to javafx.fxml, org.hibernate.orm.core;
     opens com.github.italord0.cadastro.model to org.hibernate.orm.core;

@@ -1,17 +1,12 @@
 package com.github.italord0.cadastro.controller
 
+import com.github.italord0.cadastro.dao.UserDAO
 import com.github.italord0.cadastro.model.User
-import com.github.italord0.cadastro.util.AlertBox
-import com.github.italord0.cadastro.util.SampleUsers
 import javafx.collections.FXCollections
-import javafx.collections.ObservableList
 import javafx.fxml.FXML
-import javafx.scene.control.Label
-import javafx.scene.control.ScrollPane
 import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
 import javafx.scene.control.cell.PropertyValueFactory
-import java.util.Date
 
 class HomeController {
 
@@ -34,12 +29,13 @@ class HomeController {
     lateinit var usersTableView: TableView<User>
 
     fun loadData() {
+        val userDao = UserDAO()
         idColumn.cellValueFactory = PropertyValueFactory("id")
         nameColumn.cellValueFactory = PropertyValueFactory("name")
         emailColumn.cellValueFactory = PropertyValueFactory("email")
         dateOfBirthColumn.cellValueFactory = PropertyValueFactory("formattedDate")
         balanceColumn.cellValueFactory = PropertyValueFactory("formattedBalance")
-        usersTableView.items = FXCollections.observableList(SampleUsers.users)
+        usersTableView.items = FXCollections.observableList(userDao.listAll())
     }
 
     fun updateUser() {
