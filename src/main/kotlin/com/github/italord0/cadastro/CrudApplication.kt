@@ -40,8 +40,11 @@ class CrudApplication : Application() {
         stage.scene = scene
         stage.icons.add(appIcon)
         stage.show()
+        val homeController = fxmlLoader.getController<HomeController>()
 
-        fxmlLoader.getController<HomeController>().loadData()
+        homeController.setupListeners()
+        homeController.loadData()
+        homeController.refreshList()
 
     }
 }

@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat
 import javax.persistence.*
 
 @Entity
-@Table(name = "Users")
+@Table(name = "User")
 data class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

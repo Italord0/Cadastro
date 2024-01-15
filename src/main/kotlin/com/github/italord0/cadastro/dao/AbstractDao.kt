@@ -1,15 +1,17 @@
 package com.github.italord0.cadastro.dao
 
 import com.github.italord0.cadastro.connection.ConnectionFactory
+import com.github.italord0.cadastro.model.User
+import org.hibernate.type.EntityType
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.CriteriaQuery
 import javax.persistence.criteria.Root
 
 abstract class AbstractDAO<T>(private val entityType: Class<T>) {
 
-    private val entityManager = ConnectionFactory.getEntityManager()
-
     fun insert(entity: T): T {
+        val entityManager = ConnectionFactory.getEntityManager()
+
         try {
             entityManager.transaction.begin()
             entityManager.persist(entity)
@@ -25,6 +27,8 @@ abstract class AbstractDAO<T>(private val entityType: Class<T>) {
     }
 
     fun update(entity: T): T {
+        val entityManager = ConnectionFactory.getEntityManager()
+
         try {
             entityManager.transaction.begin()
             entityManager.merge(entity)
@@ -40,6 +44,8 @@ abstract class AbstractDAO<T>(private val entityType: Class<T>) {
     }
 
     fun delete(entity: T) {
+        val entityManager = ConnectionFactory.getEntityManager()
+
         try {
             entityManager.transaction.begin()
             entityManager.remove(entityManager.merge(entity))
@@ -53,26 +59,37 @@ abstract class AbstractDAO<T>(private val entityType: Class<T>) {
     }
 
     fun findById(id: Long): T? {
+        val entityManager = ConnectionFactory.getEntityManager()
+
         return entityManager.find(entityType, id)
     }
 
     fun listAll(): List<T> {
-        val criteriaBuilder = entityManager.criteriaBuilder
-        val criteriaQuery: CriteriaQuery<T> = criteriaBuilder.createQuery(entityType)
-        val root = criteriaQuery.from(entityType)
+        val entityManager = ConnectionFactory.getEntityManager()
 
-        criteriaQuery.select(root)
-
-        return entityManager.createQuery(criteriaQuery).resultList
+        return try {
+            val query = entityManager.createQuery("FROM ${entityType.simpleName}", entityType)
+            query.resultList
+        } catch (e: Exception) {
+            System.err.println("Error fetching entities: $e")
+            emptyList()  // Return an empty list in case of an exception
+        } finally {
+            entityManager.close()
+        }
     }
 
+
     fun count(): Long {
-        val criteriaBuilder: CriteriaBuilder = entityManager.criteriaBuilder
-        val criteriaQuery: CriteriaQuery<Long> = criteriaBuilder.createQuery(Long::class.java)
-        val root: Root<T> = criteriaQuery.from(entityType)
+        val entityManager = ConnectionFactory.getEntityManager()
 
-        criteriaQuery.select(criteriaBuilder.count(root))
-
-        return entityManager.createQuery(criteriaQuery).singleResult
+        return try {
+            val query = entityManager.createQuery("SELECT COUNT(*) FROM ${entityType.simpleName}", Long::class.java)
+            query.singleResult
+        } catch (e: Exception) {
+            System.err.println("Error counting entities: $e")
+            0L
+        } finally {
+            entityManager.close()
+        }
     }
 }
