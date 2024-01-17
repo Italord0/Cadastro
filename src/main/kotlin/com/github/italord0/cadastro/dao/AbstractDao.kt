@@ -58,6 +58,24 @@ abstract class AbstractDAO<T>(private val entityType: Class<T>) {
         }
     }
 
+    fun delete(id: Long) {
+        val entityManager = ConnectionFactory.getEntityManager()
+
+        try {
+            entityManager.transaction.begin()
+            val entityToRemove = entityManager.find(entityType, id)
+            if (entityToRemove != null) {
+                entityManager.remove(entityToRemove)
+            }
+            entityManager.transaction.commit()
+        } catch (e: Exception) {
+            entityManager.transaction.rollback()
+            throw e
+        } finally {
+            entityManager.close()
+        }
+    }
+
     fun findById(id: Long): T? {
         val entityManager = ConnectionFactory.getEntityManager()
 

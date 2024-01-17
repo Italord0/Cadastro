@@ -1,21 +1,19 @@
 package com.github.italord0.cadastro.controller
 
-import com.github.italord0.cadastro.connection.ConnectionFactory
 import com.github.italord0.cadastro.dao.UserDAO
 import com.github.italord0.cadastro.model.User
 import com.github.italord0.cadastro.util.AlertBox
 import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
-import javafx.event.EventHandler
 import javafx.fxml.FXML
 import javafx.scene.control.Button
 import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
 import javafx.scene.control.TextField
 import javafx.scene.control.cell.PropertyValueFactory
-import java.sql.Savepoint
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.util.*
 
 class HomeController {
 
@@ -57,53 +55,47 @@ class HomeController {
 
     private val userDao = UserDAO()
 
+    private var selectedIds: List<Long?> = listOf()
+
     fun setupListeners() {
-        //button create
+        //region buttons
         btnSave.setOnAction {
+            saveUser()
+        }
+
+        btnDelete.setOnAction {
             try {
-                // Validate name
-                val name = txtName.text
-                if (name.isBlank()) {
-                    throw IllegalArgumentException("Name cannot be empty")
+                if (selectedIds.size != 1) {
+                    throw IllegalArgumentException("Select a item to delete")
                 }
-
-                // Validate email
-                val email = txtEmail.text
-                if (!isValidEmail(email)) {
-                    throw IllegalArgumentException("Invalid email address")
-                }
-
-                // Validate date of birth
-                val dateOfBirthText = txtDateOfBirth.text
-                val dateOfBirthMillis = validateAndConvertDateOfBirth(dateOfBirthText)
-
-                // Validate balance
-                val balanceText = txtBalance.text
-                val balance = try {
-                    balanceText.replace(",", ".").toDouble()
-                } catch (e: NumberFormatException) {
-                    throw IllegalArgumentException("Balance must be a valid number")
-                }
-
-                // Insert the user if all validations pass
-                userDao.insert(User(null, name, email, dateOfBirthMillis, balance))
-
-                // Refresh the list and show success message
+                userDao.delete(selectedIds.first() ?: 0)
+                clearFields()
                 refreshList()
-                AlertBox.display("Success", "User successfully registered!")
             } catch (e: Exception) {
                 AlertBox.display("Error", e.message.orEmpty())
             }
         }
+        //endregion
 
-        btnDelete.setOnAction {
-            println("Delete clicked")
-        }
-
-        //table select
-        usersTableView.selectionModel.selectedItems.addListener(ListChangeListener {
-
+        //region TableView
+        usersTableView.selectionModel.selectedItems.addListener(ListChangeListener { change ->
+            while (change.next()) {
+                if (change.wasAdded()) {
+                    selectedIds = change.addedSubList.toList().map(User::id)
+                    if (selectedIds.size == 1) {
+                        with(change.addedSubList[0]) {
+                            txtName.text = name
+                            txtEmail.text = email
+                            txtDateOfBirth.text = convertLongToDateAndString(dateOfBirth)
+                            txtBalance.text = balance.toString()
+                        }
+                    }
+                }
+            }
         })
+        //endregion
+
+
     }
 
     fun loadData() {
@@ -118,11 +110,52 @@ class HomeController {
         usersTableView.items = FXCollections.observableList(userDao.listAll())
     }
 
-    fun updateUser() {
+    private fun saveUser() {
+        try {
+            // Validate name
+            val name = txtName.text
+            if (name.isBlank()) {
+                throw IllegalArgumentException("Name cannot be empty")
+            }
 
+            // Validate email
+            val email = txtEmail.text
+            if (!isValidEmail(email)) {
+                throw IllegalArgumentException("Invalid email address")
+            }
+
+            if (selectedIds.size > 1) {
+                throw IllegalArgumentException("Please select only one user to save")
+            }
+
+            // Validate date of birth
+            val dateOfBirthText = txtDateOfBirth.text
+            val dateOfBirthMillis = validateAndConvertDateOfBirth(dateOfBirthText)
+
+            // Validate balance
+            val balanceText = txtBalance.text
+            val balance = try {
+                balanceText.replace(",", ".").toDouble()
+            } catch (e: NumberFormatException) {
+                throw IllegalArgumentException("Balance must be a valid number")
+            }
+
+            // Insert/update the user if all validations pass
+            val user = User(selectedIds[0], name, email, dateOfBirthMillis, balance)
+            if (selectedIds[0] != null) userDao.update(user) else userDao.insert(user)
+
+            // Refresh the list and show success message
+            refreshList()
+            selectedIds = listOf()
+            clearFields()
+
+            AlertBox.display("Success", "User successfully registered!")
+        } catch (e: Exception) {
+            AlertBox.display("Error", e.message.orEmpty())
+        }
     }
 
-    fun deleteUser() {
+    private fun deleteUser() {
 
     }
 
@@ -141,5 +174,18 @@ class HomeController {
         } catch (e: ParseException) {
             throw IllegalArgumentException("Invalid date of birth format. Use dd/MM/yyyy")
         }
+    }
+
+    private fun convertLongToDateAndString(timestamp: Long): String {
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy")
+        val date = Date(timestamp)
+        return dateFormat.format(date)
+    }
+
+    private fun clearFields() {
+        txtName.clear()
+        txtEmail.clear()
+        txtDateOfBirth.clear()
+        txtBalance.clear()
     }
 }
